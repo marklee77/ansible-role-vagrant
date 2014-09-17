@@ -5,6 +5,8 @@ marklee77.vagrant
 
 Role to install vagrant on Ubuntu.
 
+FIXME: dependency on virtualbox?
+
 Example Playbook
 ----------------
 
