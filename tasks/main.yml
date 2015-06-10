@@ -1,18 +1,34 @@
 ---
-- name: ensure /var/cache/ansible directory exists
+- name: ensure vagrant dependencies are installed
+  apt:
+    pkg: "{{ item }}"
+    state: latest
+    update_cache: yes
+    cache_valid_time: 600
+  with_items:
+    - curl
+
+- name: ensure /var/cache/apt/archives directory exists
   file:
-    path: /var/cache/ansible
+    path: /var/cache/apt/archives
     owner: root
     group: root
     mode: 0755
     state: directory
 
-- name: download the vagrant deb package
+- name: find the filename for the latest version of vagrant
+  shell: curl -Ss {{ vagrant_download_base_url }} | 
+         perl -lne 'print $1 if />(vagrant_[^<]+_x86_64.deb)</' | 
+         sort -V | tail -1
+  register: get_vagrant_pkg_filename
+  changed_when: false
+
+- name: ensure the vagrant deb package has been downloaded
   get_url:
-    url: "{{ vagrant_download_url }}"
-    dest: /var/cache/ansible/vagrant.deb
+    url: "{{ vagrant_download_base_url }}/{{ get_vagrant_pkg_filename.stdout }}"
+    dest: /var/cache/apt/archives/{{ get_vagrant_pkg_filename.stdout }}
 
 - name: ensure vagrant package is installed
-  command: dpkg -i /var/cache/ansible/vagrant.deb
-  register: install_vagrant
-  changed_when: install_vagrant.stdout.startswith("Selecting previously unselected package")
+  apt:
+    deb: /var/cache/apt/archives/{{ get_vagrant_pkg_filename.stdout }}
+    state: present
